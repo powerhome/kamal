@@ -128,6 +128,23 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "deploy with create_only" do
+    invoke_options = { "config_file" => "test/fixtures/deploy_simple.yml", "version" => "999", "skip_hooks" => false, "create_only" => true }
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+
+    run_command("deploy", "--create-only").tap do |output|
+      assert_match /Build and push app image/, output
+      assert_match /Ensure kamal-proxy is running/, output
+      assert_match /Detect stale containers/, output
+      assert_match /Prune old containers and images/, output
+    end
+  end
+
   test "deploy with no_cache" do
     invoke_options = { "config_file" => "test/fixtures/deploy_simple.yml", "version" => "999", "skip_hooks" => false, "no_cache" => true }
 
@@ -303,6 +320,19 @@ class CliMainTest < CliTestCase
 
     run_command("redeploy", "--skip_push").tap do |output|
       assert_match /Pull app image/, output
+    end
+  end
+
+  test "redeploy with create_only" do
+    invoke_options = { "config_file" => "test/fixtures/deploy_simple.yml", "version" => "999", "skip_hooks" => false, "create_only" => true }
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+
+    run_command("redeploy", "--create-only").tap do |output|
+      assert_match /Build and push app image/, output
+      assert_match /Detect stale containers/, output
     end
   end
 

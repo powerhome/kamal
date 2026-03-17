@@ -10,6 +10,19 @@ class CliAppTest < CliTestCase
     end
   end
 
+  test "boot with create_only" do
+    stub_running
+
+    run_command("boot", "--create-only").tap do |output|
+      assert_match "docker tag dhh/app:latest dhh/app:latest", output
+      assert_match /docker create --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_no_match /docker run --detach/, output
+      assert_no_match /kamal-proxy deploy/, output
+      assert_no_match /docker start/, output
+      assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
+    end
+  end
+
   test "boot will rename if same version is already running" do
     Object.any_instance.stubs(:sleep)
     run_command("details") # Preheat Kamal const

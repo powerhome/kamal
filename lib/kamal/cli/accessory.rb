@@ -3,7 +3,10 @@ require "concurrent/array"
 
 class Kamal::Cli::Accessory < Kamal::Cli::Base
   desc "boot [NAME]", "Boot new accessory service on host (use NAME=all to boot all accessories)"
+  option :create_only, type: :boolean, default: false, desc: "Create accessory container without starting it"
   def boot(name, prepare: true)
+    create_only = options[:create_only]
+
     with_lock do
       if name == "all"
         KAMAL.accessory_names.each { |accessory_name| boot(accessory_name) }
@@ -25,10 +28,12 @@ class Kamal::Cli::Accessory < Kamal::Cli::Base
           upload(name)
 
           on(hosts) do |host|
-            execute *KAMAL.auditor.record("Booted #{name} accessory"), verbosity: :debug
+            execute *KAMAL.auditor.record("#{create_only ? "Created" : "Booted"} #{name} accessory"), verbosity: :debug
             execute *accessory.ensure_env_directory
             upload! accessory.secrets_io, accessory.secrets_path, mode: "0600"
-            execute *accessory.run(host: host)
+            execute *(create_only ? accessory.create(host: host) : accessory.run(host: host))
+
+            next if create_only
 
             if accessory.running_proxy?
               target = capture_with_info(*accessory.container_id_for(container_name: accessory.service_name, only_running: true)).strip

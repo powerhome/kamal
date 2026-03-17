@@ -1,14 +1,15 @@
 class Kamal::Cli::App::Boot
-  attr_reader :host, :role, :version, :barrier, :sshkit
+  attr_reader :host, :role, :version, :barrier, :sshkit, :create_only
   delegate :execute, :capture_with_info, :capture_with_pretty_json, :info, :error, :upload!, to: :sshkit
   delegate :assets?, :running_proxy?, to: :role
 
-  def initialize(host, role, sshkit, version, barrier)
+  def initialize(host, role, sshkit, version, barrier, create_only: false)
     @host = host
     @role = role
     @version = version
     @barrier = barrier
     @sshkit = sshkit
+    @create_only = create_only
   end
 
   def run
@@ -18,7 +19,7 @@ class Kamal::Cli::App::Boot
 
     begin
       start_new_version
-    rescue => e
+    rescue
       close_barrier if gatekeeper?
       stop_new_version
       raise
@@ -44,13 +45,19 @@ class Kamal::Cli::App::Boot
     end
 
     def start_new_version
-      audit "Booted app version #{version}"
+      audit "#{create_only ? "Created" : "Booted"} app version #{version}"
       hostname = "#{host.to_s[0...51].chomp(".")}-#{SecureRandom.hex(6)}"
 
       execute *app.ensure_env_directory
       upload! role.secrets_io(host), role.secrets_path, mode: "0600"
 
-      execute *app.run(hostname: hostname)
+      if create_only
+        execute *app.create(hostname: hostname)
+      else
+        execute *app.run(hostname: hostname)
+      end
+      return if create_only
+
       if running_proxy?
         endpoint = capture_with_info(*app.container_id_for_version(version)).strip
         raise Kamal::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
