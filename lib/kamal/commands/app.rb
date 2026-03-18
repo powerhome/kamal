@@ -36,7 +36,6 @@ class Kamal::Commands::App < Kamal::Commands::Base
 
   def create(hostname: nil)
     docker :create,
-      "--detach",
       "--restart unless-stopped",
       "--name", container_name,
       "--network", "kamal",

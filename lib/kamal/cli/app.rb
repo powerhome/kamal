@@ -65,7 +65,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
       using_version(version_or_latest) do |version|
         on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
           app = KAMAL.app(role: role, host: host)
-          
+
           # Rename any existing container with the same version to avoid conflicts
           if capture_with_info(*app.container_id_for_version(version), raise_on_non_zero_exit: false).present?
             renamed_version = "#{version}_replaced_#{SecureRandom.hex(8)}"
@@ -73,9 +73,9 @@ class Kamal::Cli::App < Kamal::Cli::Base
             execute *KAMAL.auditor.record("Renaming container #{version} to #{renamed_version}", role: role), verbosity: :debug
             execute *app.rename_container(version: version, new_version: renamed_version)
           end
-          
+
           hostname = "#{host.to_s[0...51].chomp(".")}-#{SecureRandom.hex(6)}"
-          
+
           execute *KAMAL.auditor.record("Created app version #{version}", role: role), verbosity: :debug
           execute *app.ensure_env_directory
           upload! role.secrets_io(host), role.secrets_path, mode: "0600"
