@@ -19,6 +19,18 @@ class CliAccessoryTest < CliTestCase
     end
   end
 
+  test "boot with create_only" do
+    Kamal::Cli::Accessory.any_instance.expects(:directories).with("mysql")
+    Kamal::Cli::Accessory.any_instance.expects(:upload).with("mysql")
+
+    run_command("boot", "mysql", "--create-only").tap do |output|
+      assert_match "docker create --name app-mysql --restart unless-stopped --network kamal --log-opt max-size=\"10m\" --publish 3306:3306 --env KAMAL_HOST=\"1.1.1.3\" --env MYSQL_ROOT_HOST=\"%\" --env-file .kamal/apps/app/env/accessories/mysql.env --volume $PWD/app-mysql/etc/mysql/my.cnf:/etc/mysql/my.cnf --volume $PWD/app-mysql/data:/var/lib/mysql --label service=\"app-mysql\" private.registry/mysql:5.7 on 1.1.1.3", output
+      assert_no_match /docker run --name app-mysql/, output
+      assert_no_match /docker container start/, output
+      assert_no_match /kamal-proxy deploy/, output
+    end
+  end
+
   test "boot all" do
     Kamal::Cli::Accessory.any_instance.expects(:directories).with("mysql")
     Kamal::Cli::Accessory.any_instance.expects(:upload).with("mysql")

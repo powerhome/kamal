@@ -18,6 +18,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
   desc "deploy", "Deploy app to servers"
   option :skip_push, aliases: "-P", type: :boolean, default: false, desc: "Skip image build and push"
   option :no_cache, type: :boolean, default: false, desc: "Build without using Docker's build cache"
+  option :create_only, type: :boolean, default: false, desc: "Create containers without starting them"
   def deploy(boot_accessories: false)
     runtime = print_runtime do
       invoke_options = deploy_options
@@ -54,6 +55,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
   desc "redeploy", "Deploy app to servers without bootstrapping servers, starting kamal-proxy and pruning"
   option :skip_push, aliases: "-P", type: :boolean, default: false, desc: "Skip image build and push"
   option :no_cache, type: :boolean, default: false, desc: "Build without using Docker's build cache"
+  option :create_only, type: :boolean, default: false, desc: "Create containers without starting them"
   def redeploy
     runtime = print_runtime do
       invoke_options = deploy_options
@@ -278,6 +280,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     def deploy_options
       base_options = options.without("skip_push")
       base_options = base_options.except("no_cache") unless base_options["no_cache"]
+      base_options = base_options.except("create_only") unless base_options["create_only"]
       { "version" => KAMAL.config.version }.merge(base_options)
     end
 end

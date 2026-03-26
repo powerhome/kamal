@@ -1,7 +1,9 @@
 class Kamal::Cli::App < Kamal::Cli::Base
   desc "boot", "Boot app on servers (or reboot app if already running)"
+  option :create_only, type: :boolean, default: false, desc: "Create app container without starting it"
   def boot
     with_lock do
+      create_only = options[:create_only]
       say "Get most recent version available as an image...", :magenta unless options[:version]
       using_version(version_or_latest) do |version|
         say "Start container with version #{version} (or reboot if already running)...", :magenta
@@ -24,7 +26,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
           run_hook "pre-app-boot", hosts: host_list
 
           on_roles(KAMAL.roles, hosts: hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
-            Kamal::Cli::App::Boot.new(host, role, self, version, barrier).run
+            Kamal::Cli::App::Boot.new(host, role, self, version, barrier, create_only: create_only).run
           end
 
           run_hook "post-app-boot", hosts: host_list
